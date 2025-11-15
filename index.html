@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>UNDETALLIS — Secuencial</title>
+<title>UNDETALLIS — Aleatorio Sin Repetir</title>
 
-<!-- Google tag -->
+<!-- Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-3GFTY2SWSM"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -28,8 +28,6 @@
         padding: 20px;
         box-sizing: border-box;
     }
-
-    /* Fondo */
     #fondo {
         position: fixed;
         top: 0;
@@ -43,20 +41,16 @@
         filter: blur(4px) brightness(0.8);
         z-index: -1;
     }
-
     @keyframes fondoMovimiento {
         0% { transform: scale(1.02) translate(-8px, -5px); }
         100% { transform: scale(1.06) translate(6px, 5px); }
     }
-
-    /* Rebote */
     @keyframes rebote {
         0%   { opacity: 0; transform: scale(0.6); filter: blur(4px); }
         40%  { opacity: 1; transform: scale(1.08); }
         70%  { transform: scale(0.94); }
         100% { transform: scale(1); filter: blur(0); }
     }
-
     #fraseBox {
         max-width: 90%;
         padding: 35px 45px;
@@ -68,16 +62,12 @@
         text-align: center;
         line-height: 1.25;
         box-shadow: 0 0 30px rgba(0,0,0,0.45);
-
         display: flex;
         justify-content: center;
         align-items: center;
-
         animation: rebote 0.8s ease-out;
-
         backdrop-filter: blur(6px);
     }
-
     @media (max-width: 600px) {
         #fraseBox {
             font-size: 28px;
@@ -87,14 +77,12 @@
 </style>
 
 <!-- ===================== -->
-<!--   FIREBASE + FRASES   -->
+<!--   FIREBASE + LÓGICA   -->
 <!-- ===================== -->
 <script type="module">
-    /* Firebase SDK imports */
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
     import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-database.js";
 
-    /* === TU NUEVO FIREBASE === */
     const firebaseConfig = {
       apiKey: "AIzaSyBJjxw3ONW_WvUgTKeHALYdmUjTOXB0gFs",
       authDomain: "spicy-da7d7.firebaseapp.com",
@@ -108,7 +96,9 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    /* === 80 FRASES PICANTES === */
+    /* ----------------------------- */
+    /*      TUS 80 FRASES            */
+    /* ----------------------------- */
     const frases = [
 "Yo nunca nunca he besado a alguien en una fiesta",
 "Yo nunca nunca he tenido un crush en alguien del grupo",
@@ -190,30 +180,54 @@
 "Yo nunca nunca he recibido una indirecta muy directa",
 "Yo nunca nunca he sido parte de un secreto grupal",
 "Yo nunca nunca he tenido una noche que empezó tranquila y terminó inolvidable"
-
     ];
 
-    /* ========================= */
-    /*     FUNCIÓN PRINCIPAL     */
-    /* ========================= */
+    /* Barajar array */
+    function mezclar(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
     async function cargarFrase() {
         const box = document.getElementById("fraseBox");
 
-        const orderRef = ref(db, "globalOrder");
-        const snapshot = await get(orderRef);
+        const ordenRef = ref(db, "orden");
+        const posRef   = ref(db, "pos");
 
-        let index = snapshot.exists() ? snapshot.val() : 0;
-        const frase = frases[index] ?? "Error: frase no encontrada";
+        const ordenSnap = await get(ordenRef);
+        const posSnap   = await get(posRef);
 
+        let orden = ordenSnap.exists() ? ordenSnap.val() : null;
+        let pos = posSnap.exists() ? posSnap.val() : 0;
+
+        if (!orden || orden.length !== frases.length) {
+            orden = [...Array(frases.length).keys()];
+            mezclar(orden);
+            await set(ordenRef, orden);
+            pos = 0;
+            await set(posRef, 0);
+        }
+
+        const frase = frases[orden[pos]];
         box.textContent = frase;
 
-        /* Reiniciar animación rebote */
         box.style.animation = "none";
         void box.offsetWidth;
         box.style.animation = "rebote 0.8s ease-out";
 
-        index = (index + 1) % frases.length;
-        set(orderRef, index);
+        pos++;
+
+        if (pos >= frases.length) {
+            orden = [...Array(frases.length).keys()];
+            mezclar(orden);
+            pos = 0;
+            await set(ordenRef, orden);
+        }
+
+        await set(posRef, pos);
     }
 
     window.onload = cargarFrase;
