@@ -3,30 +3,14 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>UNDETALLIS — Aleatorio Sin Repetir</title>
-
-<!-- Google Analytics -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-3GFTY2SWSM"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-3GFTY2SWSM');
-</script>
+<title>UNDETALLIS — Texto 3D Interactivo</title>
 
 <style>
     body {
         margin: 0;
         overflow: hidden;
-        height: 100vh;
-        width: 100vw;
-        display: flex;
-        align-items: center;
-        justify-content: center;
         background: black;
-        font-family: "Arial", sans-serif;
-        padding: 20px;
-        box-sizing: border-box;
+        font-family: Arial, sans-serif;
     }
     #fondo {
         position: fixed;
@@ -38,204 +22,208 @@
         background-size: cover;
         background-position: center;
         animation: fondoMovimiento 2.5s infinite ease-in-out alternate;
-        filter: blur(4px) brightness(0.8);
-        z-index: -1;
+        filter: blur(6px) brightness(0.7);
+        z-index: -2;
     }
     @keyframes fondoMovimiento {
         0% { transform: scale(1.02) translate(-8px, -5px); }
         100% { transform: scale(1.06) translate(6px, 5px); }
     }
-    @keyframes rebote {
-        0%   { opacity: 0; transform: scale(0.6); filter: blur(4px); }
-        40%  { opacity: 1; transform: scale(1.08); }
-        70%  { transform: scale(0.94); }
-        100% { transform: scale(1); filter: blur(0); }
-    }
-    #fraseBox {
-        max-width: 90%;
-        padding: 35px 45px;
-        background: white;
-        color: black;
-        font-size: 38px;
-        font-weight: 900;
-        border-radius: 24px;
-        text-align: center;
-        line-height: 1.25;
-        box-shadow: 0 0 30px rgba(0,0,0,0.45);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        animation: rebote 0.8s ease-out;
-        backdrop-filter: blur(6px);
-    }
-    @media (max-width: 600px) {
-        #fraseBox {
-            font-size: 28px;
-            padding: 25px 30px;
-        }
+
+    #three-container {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 100vw;
+        height: 100vh;
+        transform: translate(-50%, -50%);
+        z-index: 10;
+        touch-action: none;
     }
 </style>
 
-<!-- ===================== -->
-<!--   FIREBASE + LÓGICA   -->
-<!-- ===================== -->
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
-    import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-database.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyBJjxw3ONW_WvUgTKeHALYdmUjTOXB0gFs",
-      authDomain: "spicy-da7d7.firebaseapp.com",
-      projectId: "spicy-da7d7",
-      storageBucket: "spicy-da7d7.firebasestorage.app",
-      messagingSenderId: "8855941044",
-      appId: "1:8855941044:web:3607c0d43293fbc6490ce1",
-      measurementId: "G-K5GK8HR3BE"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-
-    /* ----------------------------- */
-    /*      TUS 80 FRASES            */
-    /* ----------------------------- */
-    const frases = [
-"Reto: dime qué fue lo primero que pensaste de mí,", 
-"Reto: báilame como si ya estuviéramos solos,", 
-"Reto: susúrrame algo que solo yo pueda escuchar,", 
-"Reto: mírame de cerca sin apartar la mirada,", 
-"Reto: toca mi mano y dime qué sentiste,", 
-"Reto: dime una verdad que nunca dices,", 
-"Reto: descríbeme con una sola palabra fuerte,", 
-"Reto: acércate lo suficiente para dudar,", 
-"Reto: invéntame un apodo picante,", 
-"Reto: dime qué te provoca esta noche,", 
-"Reto: baila conmigo sin sonreír,", 
-"Reto: dime qué parte de mí te da más curiosidad,", 
-"Reto: acércate a mi oído sin tocarme,", 
-"Reto: respóndeme sin pensarlo,", 
-"Reto: dime la pregunta que te da pena hacerme,", 
-"Reto: dime qué te gustaría intentar pero no te atreves,", 
-"Reto: báilame una vuelta lenta,", 
-"Reto: hazme una confesión corta,", 
-"Reto: mírame y describe qué crees que estoy pensando,", 
-"Reto: dime tu fantasía suave,", 
-"Reto: cuéntame un secreto sin nombres,", 
-"Reto: ponle un nivel a lo que sientes ahora,", 
-"Reto: descríbeme sin palabras dulces,", 
-"Reto: dime qué harías si yo diera el primer paso,", 
-"Reto: elige una canción que te conecte conmigo,", 
-"Reto: dime cómo te coquetean normalmente,", 
-"Reto: muéstrame tu forma de coquetear,", 
-"Reto: pregúntame algo inocente que no lo es,", 
-"Reto: acércate y dime qué te detiene,", 
-"Reto: dímelo solo con tu mirada,", 
-"Reto: dime qué podría pasar si seguimos el juego,", 
-"Reto: dime qué nota me pones bailando,", 
-"Reto: respóndeme si te gusto sí o no,", 
-"Reto: invéntame un reto tú,", 
-"Reto: pregúntame algo que te dé nervios,", 
-"Reto: dime qué te da más curiosidad de mí,", 
-"Reto: descríbeme un momento intenso sin detalles,", 
-"Reto: acércate un paso más,", 
-"Reto: dime lo que estás evitando decir,", 
-"Reto: tómame la mano por un momento,", 
-"Reto: dime qué te intriga hoy,", 
-"Reto: termina esta frase: “Si yo quisiera…”,", 
-"Reto: dile a alguien que no mire,", 
-"Reto: dime qué te pondría nervioso aquí,", 
-"Reto: inventa un gesto para decirme que te gusto,", 
-"Reto: pregúntame algo directo,", 
-"Reto: dime tu límite suave,", 
-"Reto: acércate por detrás y dime algo,", 
-"Reto: elige un lado mío que te guste más,", 
-"Reto: dime qué tocarías si pudieras,", 
-"Reto: di qué crees que pasaría si nos dejamos llevar,", 
-"Reto: dime cómo sería tu “sí”,", 
-"Reto: mírame de cerca y dime lo primero que pienses,", 
-"Reto: dime qué te desarma,", 
-"Reto: dime qué te gustaría que yo hiciera,", 
-"Reto: pregúntame algo que no cualquiera se gana,", 
-"Reto: termina esta frase: “Lo que yo quiero es…”,", 
-"Reto: baila conmigo sin ponerme un dedo,", 
-"Reto: dime si crees que yo soy peligro,", 
-"Reto: di qué señales te doy sin notarlo,", 
-"Reto: invéntame una situación que quisieras que pasara,", 
-"Reto: dime qué parte mía mirarías otra vez,", 
-"Reto: acércate con intención,", 
-"Reto: dime qué quisieras saber pero no preguntas,", 
-"Reto: termina la frase: “Si tú te acercas, yo…”,", 
-"Reto: dime si es buena idea seguir esto,", 
-"Reto: elige quién empieza la tensión,", 
-"Reto: dime si soy tentación, problema o nada,", 
-"Reto: dime qué harías si te doy luz verde,", 
-"Reto: pregúntame algo que suene inocente pero no lo sea,", 
-"Reto: dime qué vibra te doy,", 
-"Reto: acércate tanto como quieras,", 
-"Reto: dime tu intención real conmigo hoy,", 
-"Reto: dime si quisieras que me acerque más,", 
-"Reto: di cuál sería tu primer paso,", 
-"Reto: dime qué pasaría si nadie nos viera,", 
-"Reto: pregúntame algo que no dirías sobrio,", 
-"Reto: dime cuál es tu punto débil cuando te gusta alguien,", 
-"Reto: termina la frase: “Lo peor que podría pasar es…”,", 
-"Reto: dime qué quieres que pase después de este reto,", 
-    ];
-
-    /* Barajar array */
-    function mezclar(array) {
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
-        }
-        return array;
-    }
-
-    async function cargarFrase() {
-        const box = document.getElementById("fraseBox");
-
-        const ordenRef = ref(db, "orden");
-        const posRef   = ref(db, "pos");
-
-        const ordenSnap = await get(ordenRef);
-        const posSnap   = await get(posRef);
-
-        let orden = ordenSnap.exists() ? ordenSnap.val() : null;
-        let pos = posSnap.exists() ? posSnap.val() : 0;
-
-        if (!orden || orden.length !== frases.length) {
-            orden = [...Array(frases.length).keys()];
-            mezclar(orden);
-            await set(ordenRef, orden);
-            pos = 0;
-            await set(posRef, 0);
-        }
-
-        const frase = frases[orden[pos]];
-        box.textContent = frase;
-
-        box.style.animation = "none";
-        void box.offsetWidth;
-        box.style.animation = "rebote 0.8s ease-out";
-
-        pos++;
-
-        if (pos >= frases.length) {
-            orden = [...Array(frases.length).keys()];
-            mezclar(orden);
-            pos = 0;
-            await set(ordenRef, orden);
-        }
-
-        await set(posRef, pos);
-    }
-
-    window.onload = cargarFrase;
-</script>
 </head>
-
 <body>
-    <div id="fondo"></div>
-    <div id="fraseBox">Cargando...</div>
+
+<div id="fondo"></div>
+<div id="three-container"></div>
+
+<!-- THREE.JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
+<script src="https://threejs.org/examples/jsm/loaders/FontLoader.js"></script>
+<script src="https://threejs.org/examples/jsm/geometries/TextGeometry.js"></script>
+
+<!-- ========================= -->
+<!--   FIREBASE + FRASES       -->
+<!-- ========================= -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBJjxw3ONW_WvUgTKeHALYdmUjTOXB0gFs",
+  authDomain: "spicy-da7d7.firebaseapp.com",
+  projectId: "spicy-da7d7",
+  storageBucket: "spicy-da7d7.firebasestorage.app",
+  messagingSenderId: "8855941044",
+  appId: "1:8855941044:web:3607c0d43293fbc6490ce1",
+  measurementId: "G-K5GK8HR3BE"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const frases = [
+"Reto: dime qué fue lo primero que pensaste de mí,",
+"Reto: báilame como si ya estuviéramos solos,",
+"Reto: susúrrame algo que solo yo pueda escuchar,",
+"Reto: mírame de cerca sin apartar la mirada,",
+"Reto: toca mi mano y dime qué sentiste,",
+"Reto: dime una verdad que nunca dices,",
+];
+
+function mezclar(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
+
+/* ========================= */
+/*   SISTEMA DE TEXTO 3D     */
+/* ========================= */
+let scene, camera, renderer, textMesh, font;
+let targetRotationX = 0;
+let targetRotationY = 0;
+
+function init3D() {
+    const container = document.getElementById("three-container");
+
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 2000);
+    camera.position.z = 180;
+
+    renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    container.appendChild(renderer.domElement);
+
+    const light = new THREE.PointLight(0xffffff, 1.2);
+    light.position.set(50, 50, 200);
+    scene.add(light);
+
+    const loader = new THREE.FontLoader();
+    loader.load("https://threejs.org/examples/fonts/helvetiker_bold.typeface.json", f => {
+        font = f;
+        cargarFrase(); // Mostrar la primera frase
+    });
+
+    container.addEventListener("pointerdown", startDrag);
+    container.addEventListener("pointermove", drag);
+    container.addEventListener("pointerup", endDrag);
+}
+
+let isDragging = false;
+let lastX = 0;
+let lastY = 0;
+
+function startDrag(e) {
+    isDragging = true;
+    lastX = e.clientX;
+    lastY = e.clientY;
+}
+
+function drag(e) {
+    if (!isDragging) return;
+
+    const dx = e.clientX - lastX;
+    const dy = e.clientY - lastY;
+
+    targetRotationY += dx * 0.01;
+    targetRotationX += dy * 0.01;
+
+    lastX = e.clientX;
+    lastY = e.clientY;
+}
+
+function endDrag() {
+    isDragging = false;
+}
+
+function render() {
+    requestAnimationFrame(render);
+
+    if (textMesh) {
+        textMesh.rotation.y = targetRotationY;
+        textMesh.rotation.x = targetRotationX;
+    }
+
+    renderer.render(scene, camera);
+}
+
+async function cargarFrase() {
+    const ordenRef = ref(db, "orden");
+    const posRef = ref(db, "pos");
+
+    const ordenSnap = await get(ordenRef);
+    const posSnap = await get(posRef);
+
+    let orden = ordenSnap.exists() ? ordenSnap.val() : null;
+    let pos = posSnap.exists() ? posSnap.val() : 0;
+
+    if (!orden || orden.length !== frases.length) {
+        orden = [...Array(frases.length).keys()];
+        mezclar(orden);
+        await set(ordenRef, orden);
+        pos = 0;
+        await set(posRef, 0);
+    }
+
+    const frase = frases[orden[pos]];
+    mostrarTexto3D(frase);
+
+    pos++;
+    if (pos >= frases.length) {
+        orden = [...Array(frases.length).keys()];
+        mezclar(orden);
+        pos = 0;
+        await set(ordenRef, orden);
+    }
+
+    await set(posRef, pos);
+}
+
+function mostrarTexto3D(texto) {
+    if (!font) return;
+
+    if (textMesh) scene.remove(textMesh);
+
+    const geo = new THREE.TextGeometry(texto, {
+        font: font,
+        size: 12,
+        height: 4,
+        curveSegments: 12,
+        bevelEnabled: true,
+        bevelThickness: 1,
+        bevelSize: 0.8
+    });
+
+    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.3, roughness: 0.4 });
+
+    textMesh = new THREE.Mesh(geo, mat);
+
+    geo.computeBoundingBox();
+    const centerX = - (geo.boundingBox.max.x - geo.boundingBox.min.x) / 2;
+    const centerY = - (geo.boundingBox.max.y - geo.boundingBox.min.y) / 2;
+    textMesh.position.set(centerX, centerY, 0);
+
+    scene.add(textMesh);
+}
+
+window.onload = () => {
+    init3D();
+    render();
+};
+</script>
 </body>
 </html>
