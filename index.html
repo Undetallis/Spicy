@@ -3,15 +3,33 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>UNDETALLIS — Texto 3D Interactivo</title>
+<title>UNDETALLIS — Aleatorio Sin Repetir (3D)</title>
+
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-3GFTY2SWSM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-3GFTY2SWSM');
+</script>
 
 <style>
+    /* página */
+    html,body { height:100%; margin:0; padding:0; }
     body {
         margin: 0;
         overflow: hidden;
+        height: 100vh;
+        width: 100vw;
         background: black;
-        font-family: Arial, sans-serif;
+        font-family: "Arial", sans-serif;
+        box-sizing: border-box;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
     }
+
+    /* fondo con animación */
     #fondo {
         position: fixed;
         top: 0;
@@ -22,7 +40,7 @@
         background-size: cover;
         background-position: center;
         animation: fondoMovimiento 2.5s infinite ease-in-out alternate;
-        filter: blur(6px) brightness(0.7);
+        filter: blur(4px) brightness(0.8);
         z-index: -2;
     }
     @keyframes fondoMovimiento {
@@ -30,200 +48,400 @@
         100% { transform: scale(1.06) translate(6px, 5px); }
     }
 
+    /* contenedor WebGL (ocupa toda la pantalla) */
     #three-container {
         position: absolute;
-        top: 50%;
+        inset: 0;
+        touch-action: none; /* importante para gestos táctiles */
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    /* caja informativa opcional (oculta por defecto, aparece si quieres mostrar texto HTML) */
+    #fallbackBox {
+        position: absolute;
         left: 50%;
-        width: 100vw;
-        height: 100vh;
-        transform: translate(-50%, -50%);
-        z-index: 10;
-        touch-action: none;
+        bottom: 36px;
+        transform: translateX(-50%);
+        background: rgba(255,255,255,0.06);
+        color: rgba(255,255,255,0.9);
+        padding: 10px 16px;
+        border-radius: 12px;
+        backdrop-filter: blur(6px);
+        font-weight: 600;
+        font-size: 14px;
+        z-index: 20;
+        display: none;
+    }
+
+    /* responsividad: reducir tamaño de texto 3D si pantalla muy pequeña (se ajusta dinámicamente también) */
+    @media (max-width: 600px) {
+        #fallbackBox { font-size: 13px; padding: 8px 12px; }
     }
 </style>
-
 </head>
+
 <body>
+    <div id="fondo"></div>
+    <div id="three-container"></div>
+    <div id="fallbackBox">Toca y arrastra para rotar. Toca rápido para siguiente frase.</div>
 
-<div id="fondo"></div>
-<div id="three-container"></div>
+    <!-- Usamos ES modules para Three.js y Firebase -->
+    <script type="module">
+    // ---------- IMPORTS ----------
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.152.0/build/three.module.js';
+    import { FontLoader } from 'https://cdn.jsdelivr.net/npm/three@0.152.0/examples/jsm/loaders/FontLoader.js';
+    import { TextGeometry } from 'https://cdn.jsdelivr.net/npm/three@0.152.0/examples/jsm/geometries/TextGeometry.js';
 
-<!-- THREE.JS -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
-<script src="https://threejs.org/examples/jsm/loaders/FontLoader.js"></script>
-<script src="https://threejs.org/examples/jsm/geometries/TextGeometry.js"></script>
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+    import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-database.js";
 
-<!-- ========================= -->
-<!--   FIREBASE + FRASES       -->
-<!-- ========================= -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
-import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-database.js";
+    // ---------- FIREBASE CONFIG ----------
+    const firebaseConfig = {
+      apiKey: "AIzaSyBJjxw3ONW_WvUgTKeHALYdmUjTOXB0gFs",
+      authDomain: "spicy-da7d7.firebaseapp.com",
+      projectId: "spicy-da7d7",
+      storageBucket: "spicy-da7d7.firebasestorage.app",
+      messagingSenderId: "8855941044",
+      appId: "1:8855941044:web:3607c0d43293fbc6490ce1",
+      measurementId: "G-K5GK8HR3BE"
+    };
 
-const firebaseConfig = {
-  apiKey: "AIzaSyBJjxw3ONW_WvUgTKeHALYdmUjTOXB0gFs",
-  authDomain: "spicy-da7d7.firebaseapp.com",
-  projectId: "spicy-da7d7",
-  storageBucket: "spicy-da7d7.firebasestorage.app",
-  messagingSenderId: "8855941044",
-  appId: "1:8855941044:web:3607c0d43293fbc6490ce1",
-  measurementId: "G-K5GK8HR3BE"
-};
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+    // ---------- TUS 80 FRASES (completas) ----------
+    const frases = [
+"Reto: dime qué fue lo primero que pensaste de mí,", 
+"Reto: báilame como si ya estuviéramos solos,", 
+"Reto: susúrrame algo que solo yo pueda escuchar,", 
+"Reto: mírame de cerca sin apartar la mirada,", 
+"Reto: toca mi mano y dime qué sentiste,", 
+"Reto: dime una verdad que nunca dices,", 
+"Reto: descríbeme con una sola palabra fuerte,", 
+"Reto: acércate lo suficiente para dudar,", 
+"Reto: invéntame un apodo picante,", 
+"Reto: dime qué te provoca esta noche,", 
+"Reto: baila conmigo sin sonreír,", 
+"Reto: dime qué parte de mí te da más curiosidad,", 
+"Reto: acércate a mi oído sin tocarme,", 
+"Reto: respóndeme sin pensarlo,", 
+"Reto: dime la pregunta que te da pena hacerme,", 
+"Reto: dime qué te gustaría intentar pero no te atreves,", 
+"Reto: báilame una vuelta lenta,", 
+"Reto: hazme una confesión corta,", 
+"Reto: mírame y describe qué crees que estoy pensando,", 
+"Reto: dime tu fantasía suave,", 
+"Reto: cuéntame un secreto sin nombres,", 
+"Reto: ponle un nivel a lo que sientes ahora,", 
+"Reto: descríbeme sin palabras dulces,", 
+"Reto: dime qué harías si yo diera el primer paso,", 
+"Reto: elige una canción que te conecte conmigo,", 
+"Reto: dime cómo te coquetean normalmente,", 
+"Reto: muéstrame tu forma de coquetear,", 
+"Reto: pregúntame algo inocente que no lo es,", 
+"Reto: acércate y dime qué te detiene,", 
+"Reto: dímelo solo con tu mirada,", 
+"Reto: dime qué podría pasar si seguimos el juego,", 
+"Reto: dime qué nota me pones bailando,", 
+"Reto: respóndeme si te gusto sí o no,", 
+"Reto: invéntame un reto tú,", 
+"Reto: pregúntame algo que te dé nervios,", 
+"Reto: dime qué te da más curiosidad de mí,", 
+"Reto: descríbeme un momento intenso sin detalles,", 
+"Reto: acércate un paso más,", 
+"Reto: dime lo que estás evitando decir,", 
+"Reto: tómame la mano por un momento,", 
+"Reto: dime qué te intriga hoy,", 
+"Reto: termina esta frase: “Si yo quisiera…”,", 
+"Reto: dile a alguien que no mire,", 
+"Reto: dime qué te pondría nervioso aquí,", 
+"Reto: inventa un gesto para decirme que te gusto,", 
+"Reto: pregúntame algo directo,", 
+"Reto: dime tu límite suave,", 
+"Reto: acércate por detrás y dime algo,", 
+"Reto: elige un lado mío que te guste más,", 
+"Reto: dime qué tocarías si pudieras,", 
+"Reto: di qué crees que pasaría si nos dejamos llevar,", 
+"Reto: dime cómo sería tu “sí”,", 
+"Reto: mírame de cerca y dime lo primero que pienses,", 
+"Reto: dime qué te desarma,", 
+"Reto: dime qué te gustaría que yo hiciera,", 
+"Reto: pregúntame algo que no cualquiera se gana,", 
+"Reto: termina esta frase: “Lo que yo quiero es…”,", 
+"Reto: baila conmigo sin ponerme un dedo,", 
+"Reto: dime si crees que yo soy peligro,", 
+"Reto: di qué señales te doy sin notarlo,", 
+"Reto: invéntame una situación que quisieras que pasara,", 
+"Reto: dime qué parte mía mirarías otra vez,", 
+"Reto: acércate con intención,", 
+"Reto: dime qué quisieras saber pero no preguntas,", 
+"Reto: termina la frase: “Si tú te acercas, yo…”,", 
+"Reto: dime si es buena idea seguir esto,", 
+"Reto: elige quién empieza la tensión,", 
+"Reto: dime si soy tentación, problema o nada,", 
+"Reto: dime qué harías si te doy luz verde,", 
+"Reto: pregúntame algo que suene inocente pero no lo sea,", 
+"Reto: dime qué vibra te doy,", 
+"Reto: acércate tanto como quieras,", 
+"Reto: dime tu intención real conmigo hoy,", 
+"Reto: dime si quisieras que me acerque más,", 
+"Reto: di cuál sería tu primer paso,", 
+"Reto: dime qué pasaría si nadie nos viera,", 
+"Reto: pregúntame algo que no dirías sobrio,", 
+"Reto: dime cuál es tu punto débil cuando te gusta alguien,", 
+"Reto: termina la frase: “Lo peor que podría pasar es…”,", 
+"Reto: dime qué quieres que pase después de este reto,"
+    ];
 
-const frases = [
-"Reto: dime qué fue lo primero que pensaste de mí,",
-"Reto: báilame como si ya estuviéramos solos,",
-"Reto: susúrrame algo que solo yo pueda escuchar,",
-"Reto: mírame de cerca sin apartar la mirada,",
-"Reto: toca mi mano y dime qué sentiste,",
-"Reto: dime una verdad que nunca dices,",
-];
-
-function mezclar(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-    }
-    return array;
-}
-
-/* ========================= */
-/*   SISTEMA DE TEXTO 3D     */
-/* ========================= */
-let scene, camera, renderer, textMesh, font;
-let targetRotationX = 0;
-let targetRotationY = 0;
-
-function init3D() {
-    const container = document.getElementById("three-container");
-
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 2000);
-    camera.position.z = 180;
-
-    renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    container.appendChild(renderer.domElement);
-
-    const light = new THREE.PointLight(0xffffff, 1.2);
-    light.position.set(50, 50, 200);
-    scene.add(light);
-
-    const loader = new THREE.FontLoader();
-    loader.load("https://threejs.org/examples/fonts/helvetiker_bold.typeface.json", f => {
-        font = f;
-        cargarFrase(); // Mostrar la primera frase
-    });
-
-    container.addEventListener("pointerdown", startDrag);
-    container.addEventListener("pointermove", drag);
-    container.addEventListener("pointerup", endDrag);
-}
-
-let isDragging = false;
-let lastX = 0;
-let lastY = 0;
-
-function startDrag(e) {
-    isDragging = true;
-    lastX = e.clientX;
-    lastY = e.clientY;
-}
-
-function drag(e) {
-    if (!isDragging) return;
-
-    const dx = e.clientX - lastX;
-    const dy = e.clientY - lastY;
-
-    targetRotationY += dx * 0.01;
-    targetRotationX += dy * 0.01;
-
-    lastX = e.clientX;
-    lastY = e.clientY;
-}
-
-function endDrag() {
-    isDragging = false;
-}
-
-function render() {
-    requestAnimationFrame(render);
-
-    if (textMesh) {
-        textMesh.rotation.y = targetRotationY;
-        textMesh.rotation.x = targetRotationX;
-    }
-
-    renderer.render(scene, camera);
-}
-
-async function cargarFrase() {
-    const ordenRef = ref(db, "orden");
-    const posRef = ref(db, "pos");
-
-    const ordenSnap = await get(ordenRef);
-    const posSnap = await get(posRef);
-
-    let orden = ordenSnap.exists() ? ordenSnap.val() : null;
-    let pos = posSnap.exists() ? posSnap.val() : 0;
-
-    if (!orden || orden.length !== frases.length) {
-        orden = [...Array(frases.length).keys()];
-        mezclar(orden);
-        await set(ordenRef, orden);
-        pos = 0;
-        await set(posRef, 0);
+    // ---------- UTIL: mezcla Fisher-Yates ----------
+    function mezclar(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
     }
 
-    const frase = frases[orden[pos]];
-    mostrarTexto3D(frase);
+    // ---------- Three.js: escena, cámara, render y texto 3D ----------
+    let scene, camera, renderer;
+    let textMesh = null;
+    let font = null;
 
-    pos++;
-    if (pos >= frases.length) {
-        orden = [...Array(frases.length).keys()];
-        mezclar(orden);
-        pos = 0;
-        await set(ordenRef, orden);
+    // rotación interactiva
+    let isDragging = false;
+    let lastX = 0, lastY = 0;
+    let rotX = 0, rotY = 0;
+    let movedSinceDown = false;
+
+    const container = document.getElementById('three-container');
+    const fallbackBox = document.getElementById('fallbackBox');
+
+    // Ajuste de tamaño del texto según longitud
+    function sizeForText(t) {
+        // base 14, reducir si es muy largo
+        const len = t.length;
+        if (len < 40) return 14;
+        if (len < 70) return 11;
+        if (len < 110) return 9;
+        return 7.5;
     }
 
-    await set(posRef, pos);
-}
+    function initThree() {
+        scene = new THREE.Scene();
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        camera = new THREE.PerspectiveCamera(45, w / h, 1, 2000);
+        camera.position.z = 200;
 
-function mostrarTexto3D(texto) {
-    if (!font) return;
+        renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setPixelRatio(window.devicePixelRatio || 1);
+        renderer.setSize(w, h);
+        container.appendChild(renderer.domElement);
 
-    if (textMesh) scene.remove(textMesh);
+        // luces
+        const light1 = new THREE.DirectionalLight(0xffffff, 0.9);
+        light1.position.set(0.5, 0.8, 1).normalize();
+        scene.add(light1);
 
-    const geo = new THREE.TextGeometry(texto, {
-        font: font,
-        size: 12,
-        height: 4,
-        curveSegments: 12,
-        bevelEnabled: true,
-        bevelThickness: 1,
-        bevelSize: 0.8
-    });
+        const light2 = new THREE.AmbientLight(0xffffff, 0.35);
+        scene.add(light2);
 
-    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.3, roughness: 0.4 });
+        // listeners táctil / puntero
+        container.addEventListener('pointerdown', onPointerDown);
+        container.addEventListener('pointermove', onPointerMove);
+        container.addEventListener('pointerup', onPointerUp);
+        container.addEventListener('pointercancel', onPointerUp);
+        window.addEventListener('resize', onResize);
 
-    textMesh = new THREE.Mesh(geo, mat);
+        animate();
+    }
 
-    geo.computeBoundingBox();
-    const centerX = - (geo.boundingBox.max.x - geo.boundingBox.min.x) / 2;
-    const centerY = - (geo.boundingBox.max.y - geo.boundingBox.min.y) / 2;
-    textMesh.position.set(centerX, centerY, 0);
+    function onResize() {
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+    }
 
-    scene.add(textMesh);
-}
+    function onPointerDown(e) {
+        isDragging = true;
+        movedSinceDown = false;
+        lastX = e.clientX;
+        lastY = e.clientY;
+    }
 
-window.onload = () => {
-    init3D();
-    render();
-};
-</script>
+    function onPointerMove(e) {
+        if (!isDragging) return;
+        const dx = e.clientX - lastX;
+        const dy = e.clientY - lastY;
+        // pequeñas variaciones cuentan como movimiento
+        if (Math.abs(dx) > 2 || Math.abs(dy) > 2) movedSinceDown = true;
+        rotY += dx * 0.008;
+        rotX += dy * 0.008;
+        lastX = e.clientX;
+        lastY = e.clientY;
+    }
+
+    async function onPointerUp(e) {
+        isDragging = false;
+        // si no se movió mucho, lo interpretamos como tap -> cargar siguiente frase
+        if (!movedSinceDown) {
+            // pequeña protección: si font aún no cargada, ignorar
+            if (font) {
+                await cargarFrase(); // carga la siguiente frase (y la muestra)
+            }
+        }
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        if (textMesh) {
+            // aplicar rotación suavizada
+            textMesh.rotation.x += (rotX - textMesh.rotation.x) * 0.2;
+            textMesh.rotation.y += (rotY - textMesh.rotation.y) * 0.2;
+        }
+        renderer.render(scene, camera);
+    }
+
+    // ---------- Mostrar texto 3D ----------
+    function mostrarTexto3D(texto) {
+        if (!font) return;
+        // eliminar anterior
+        if (textMesh) {
+            scene.remove(textMesh);
+            textMesh.geometry.dispose();
+            if (Array.isArray(textMesh.material)) {
+                textMesh.material.forEach(m => m.dispose());
+            } else {
+                textMesh.material.dispose();
+            }
+            textMesh = null;
+        }
+
+        const size = sizeForText(texto);
+        const geo = new TextGeometry(texto, {
+            font: font,
+            size: size,
+            height: Math.max(size * 0.25, 2),
+            curveSegments: 12,
+            bevelEnabled: true,
+            bevelThickness: Math.max(size * 0.06, 0.6),
+            bevelSize: Math.max(size * 0.04, 0.4),
+            bevelOffset: 0,
+            bevelSegments: 3
+        });
+
+        // centra el texto
+        geo.computeBoundingBox();
+        const bb = geo.boundingBox;
+        const xMid = -0.5 * (bb.max.x - bb.min.x);
+        const yMid = -0.5 * (bb.max.y - bb.min.y);
+        geo.translate(xMid, yMid, 0);
+
+        // material: gradiente visual simple usando MeshStandardMaterial
+        const mat = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            metalness: 0.25,
+            roughness: 0.35
+        });
+
+        textMesh = new THREE.Mesh(geo, mat);
+
+        // ligera elevación para que se vea profundidad
+        textMesh.position.z = 0;
+
+        scene.add(textMesh);
+
+        // mostrar indicación pequeña si estaba oculta
+        fallbackBox.style.display = 'block';
+        // animación de "pop" inicial
+        textMesh.scale.set(0.85,0.85,0.85);
+        // pequeño "tween" manual
+        const start = performance.now();
+        const dur = 360;
+        (function popAnim(now){
+            const t = Math.min(1, (now - start) / dur);
+            const s = 0.85 + (1 - 0.85) * (1 - Math.pow(1 - t, 3));
+            if (textMesh) textMesh.scale.set(s,s,s);
+            if (t < 1) requestAnimationFrame(popAnim);
+        })(start);
+    }
+
+    // ---------- LÓGICA DE FRASES + Firebase (misma lógica que tenías) ----------
+    // lee 'orden' y 'pos' de Firebase y muestra la frase actual (sin repetir hasta terminar)
+    async function cargarFrase() {
+        try {
+            const ordenRef = ref(db, "orden");
+            const posRef   = ref(db, "pos");
+
+            const ordenSnap = await get(ordenRef);
+            const posSnap   = await get(posRef);
+
+            let orden = ordenSnap.exists() ? ordenSnap.val() : null;
+            let pos = posSnap.exists() ? posSnap.val() : 0;
+
+            // inicializar orden si no existe o cambió de tamaño
+            if (!orden || !Array.isArray(orden) || orden.length !== frases.length) {
+                orden = [...Array(frases.length).keys()];
+                mezclar(orden);
+                await set(ordenRef, orden);
+                pos = 0;
+                await set(posRef, 0);
+            }
+
+            // seguridad: si pos está fuera de rango, resetear
+            if (typeof pos !== 'number' || pos < 0 || pos >= orden.length) pos = 0;
+
+            const frase = frases[orden[pos]] || frases[0];
+            mostrarTexto3D(frase);
+
+            // incrementar posición y guardar
+            pos++;
+            if (pos >= frases.length) {
+                // reshuffle para nuevo ciclo
+                orden = [...Array(frases.length).keys()];
+                mezclar(orden);
+                pos = 0;
+                await set(ordenRef, orden);
+            }
+
+            await set(posRef, pos);
+        } catch (err) {
+            // en caso de error con Firebase, muestra la primera frase local como fallback
+            console.error('Error al cargar frase:', err);
+            if (font) mostrarTexto3D(frases[0]);
+        }
+    }
+
+    // ---------- INICIALIZACIÓN: cargar fuente, iniciar three y cargar primera frase ----------
+    async function start() {
+        initThree();
+
+        // cargar fuente (usamos helvetiker_bold de threejs examples)
+        const loader = new FontLoader();
+        loader.load('https://threejs.org/examples/fonts/helvetiker_bold.typeface.json',
+            (loadedFont) => {
+                font = loadedFont;
+                // una vez cargada la fuente, solicita la primera frase desde Firebase
+                cargarFrase().catch(e => {
+                    console.error('Error en cargarFrase on start:', e);
+                    // si falla Firebase por CORS o cualquier cosa, muestra frase local
+                    if (font) mostrarTexto3D(frases[0]);
+                });
+            },
+            undefined,
+            (err) => {
+                console.error('Error cargando fuente 3D:', err);
+                // fallback: ocultar fallbackBox si no hay texto 3D
+                fallbackBox.style.display = 'none';
+            }
+        );
+    }
+
+    // arrancar
+    start();
+
+    </script>
 </body>
 </html>
